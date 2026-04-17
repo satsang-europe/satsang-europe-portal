@@ -1,0 +1,202 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum ImportStatus {
+  completed
+  failed
+}
+
+enum MemberRole {
+  primary
+  secondary
+}
+
+enum MemberCategory {
+  initiated
+  non_initiated
+  spr
+}
+
+enum DonationStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+// ── Models ────────────────────────────────────────────────────────────────────
+
+model Admin {
+  id             String          @id @default(uuid())
+  name           String
+  email          String          @unique
+  hashedPassword String
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  arghyaCodes    ArghyaCode[]
+  sprImports     SprFileImport[]
+}
+
+model Family {
+  id                   String                @id @default(uuid())
+  familyCode           String                @unique
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  members              Member[]
+  arghyaDonations      ArghyaDonation[]
+  ishtabhrityDonations IshtabhrityDonation[]
+}
+
+model SprMaster {
+  id         String         @id @default(uuid())
+  name       String         @unique
+  region     String?
+  isActive   Boolean        @default(true)
+  importedAt DateTime       @default(now())
+  importId   String?
+  import     SprFileImport? @relation(fields: [importId], references: [id])
+  members    Member[]
+}
+
+model SprFileImport {
+  id                String      @id @default(uuid())
+  importedByAdminId String
+  admin             Admin       @relation(fields: [importedByAdminId], references: [id])
+  fileName          String
+  totalRecords      Int
+  importedRecords   Int
+  status            ImportStatus
+  importedAt        DateTime    @default(now())
+  sprMasters        SprMaster[]
+}
+
+model Member {
+  id                  String               @id @default(uuid())
+  familyId            String
+  family              Family               @relation(fields: [familyId], references: [id])
+  name                String
+  email               String?              @unique
+  phone               String?
+  address             String?
+  role                MemberRole
+  category            MemberCategory
+  sprId               String?
+  spr                 SprMaster?           @relation(fields: [sprId], references: [id])
+  isActive            Boolean              @default(true)
+  hashedPassword      String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  arghyaDonations     ArghyaDonation[]
+  ishtabhrityEntries  IshtabhrityEntry[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@index([familyId])
+}
+
+model ArghyaCode {
+  id               String           @id @default(uuid())
+  code             String           @unique
+  description      String?
+  isActive         Boolean          @default(true)
+  hasDonations     Boolean          @default(false)
+  createdByAdminId String
+  admin            Admin            @relation(fields: [createdByAdminId], references: [id])
+  createdAt        DateTime         @default(now())
+  donations        ArghyaDonation[]
+}
+
+model ArghyaDonation {
+  id                    String         @id @default(uuid())
+  memberId              String
+  member                Member         @relation(fields: [memberId], references: [id])
+  familyId              String
+  family                Family         @relation(fields: [familyId], references: [id])
+  arghyaCodeId          String
+  arghyaCode            ArghyaCode     @relation(fields: [arghyaCodeId], references: [id])
+  amount                Decimal        @db.Decimal(12, 2)
+  currency              String
+  eurAmount             Decimal?       @db.Decimal(12, 2)
+  stripePaymentIntentId String         @unique
+  status                DonationStatus
+  receiptNumber         String?        @unique
+  receiptS3Key          String?
+  donatedAt             DateTime       @default(now())
+
+  @@index([familyId])
+  @@index([memberId])
+}
+
+model IshtabhrityDonation {
+  id                    String               @id @default(uuid())
+  familyId              String
+  family                Family               @relation(fields: [familyId], references: [id])
+  stripePaymentIntentId String               @unique
+  status                DonationStatus
+  totalAmount           Decimal              @db.Decimal(12, 2)
+  currency              String
+  eurAmount             Decimal?             @db.Decimal(12, 2)
+  receiptNumber         String?              @unique
+  receiptS3Key          String?
+  donatedAt             DateTime             @default(now())
+  entries               IshtabhrityEntry[]
+
+  @@index([familyId])
+}
+
+model IshtabhrityEntry {
+  id             String              @id @default(uuid())
+  donationId     String
+  donation       IshtabhrityDonation @relation(fields: [donationId], references: [id])
+  memberId       String
+  member         Member              @relation(fields: [memberId], references: [id])
+  sprNameDisplay String?
+  swastyayani    Decimal             @default(0) @db.Decimal(12, 2)
+  istavrity      Decimal             @default(0) @db.Decimal(12, 2)
+  acharyavrity   Decimal             @default(0) @db.Decimal(12, 2)
+  dakshina       Decimal             @default(0) @db.Decimal(12, 2)
+  sangathani     Decimal             @default(0) @db.Decimal(12, 2)
+  anandabazar    Decimal             @default(0) @db.Decimal(12, 2)
+  promaniBhog    Decimal             @default(0) @db.Decimal(12, 2)
+  sriMandir      Decimal             @default(0) @db.Decimal(12, 2)
+  ritwiki        Decimal             @default(0) @db.Decimal(12, 2)
+  utsav          Decimal             @default(0) @db.Decimal(12, 2)
+  centenary      Decimal             @default(0) @db.Decimal(12, 2)
+  miscellaneous  Decimal             @default(0) @db.Decimal(12, 2)
+  rowTotal       Decimal             @default(0) @db.Decimal(12, 2)
+  rowOrder       Int
+
+  @@index([donationId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  memberId  String
+  member    Member    @relation(fields: [memberId], references: [id])
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model LoginAttempt {
+  id          String   @id @default(uuid())
+  identifier  String
+  ipAddress   String?
+  success     Boolean
+  attemptedAt DateTime @default(now())
+
+  @@index([identifier, attemptedAt])
+}
