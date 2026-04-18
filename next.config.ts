@@ -23,10 +23,10 @@ const nextConfig: NextConfig = {
   },
 
   // ── Experimental ─────────────────────────────────────────────────────────
-  experimental: {
-    // Required for react-pdf in App Router server components
-    serverComponentsExternalPackages: ["@react-pdf/renderer"],
-  },
+  // ── Experimental ─────────────────────────────────────────────────────────
+  // (no experimental options needed currently)
+  // ── Server External Packages ────────────────────────────────────────────────
+  serverExternalPackages: ["@react-pdf/renderer", "bcrypt", "@prisma/client"],
 };
 
 export default nextConfig;

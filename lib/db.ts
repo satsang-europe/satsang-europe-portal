@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -13,3 +12,4 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export default prisma;
+export { prisma as db };
